@@ -44,3 +44,10 @@ backend/storage/uploads/*
 # Local PostgreSQL database cluster
 .pgdata/
 
+# Python & AI local server
+.venv/
+ai-local-server/.venv/
+ai-local-server/models/
+ai-local-server/__pycache__/
+*.pyc
+__pycache__/

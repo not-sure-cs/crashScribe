@@ -75,6 +75,8 @@ export interface AccidentReportData {
 
   // Section 6: Accident Description
   accident_description: string;
+  /** AI suggestions remain separate until the officer explicitly approves them. */
+  ai_narrative_draft?: AITranscriptDraft;
 
   // Section 7: Evidence
   evidence: EvidenceItem[];
@@ -104,3 +106,4 @@ export interface ValidationErrorItem {
   label: string;
   message: string;
 }
+import type { AITranscriptDraft } from './ai.types';

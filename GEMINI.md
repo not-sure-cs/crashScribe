@@ -18,9 +18,9 @@
    - **Zero automatic uploads** when network connectivity is restored.
    - Sync occurs **strictly and solely** when the officer manually taps "Sync" or "Sync All" in the Settings tab.
 3. **Decoupled AI & Speech-to-Text:**
-   - Microphone icons beside narrative inputs act as **mock UI placeholders** (tap &rarr; simulated listening &rarr; mock hardcoded string).
-   - Settings tab model download cards (*IndicConformer INT8* and *Whisper Tiny.en + IndicTrans2*) are **simulated UI components**.
-   - **DO NOT** implement actual audio recording, speech recognition, translation, ONNX/TFLite model execution, or actual file downloads.
+   - The current React + Vite client must never generate fake transcription, translation, download progress, or model-ready state.
+   - Native audio capture and inference belong in the planned React Native Android client or a separate native Android client sharing TypeScript contracts.
+   - The browser demo keeps manual entry available and may show an explicit native-client-required notice.
 4. **Sensor Auto-Capture:** Automate capture for device GPS latitude/longitude and local timestamps, with manual override fallback.
 5. **eDAR Conformance:** Strict alignment with official MoRTH eDAR schemas, supporting dynamic ordering modes without altering the underlying data model.
 
@@ -130,7 +130,7 @@ The platform comprises an **offline-first mobile client**, a **high-performance 
   3. Road & Environmental Conditions (Surface, Weather, Visibility, Geometry).
   4. Vehicle Information (Dynamic 1-to-N vehicle cards).
   5. Persons Involved (Dynamic 1-to-N casualty cards).
-  6. Accident Description (Narrative text with mock microphone).
+  6. Accident Description (Narrative text with native-client-only AI assist and manual fallback).
   7. Evidence & Attachments (Camera/gallery picker, thumbnails, captions).
 
 ### 4.3. Field-Order Toggle
@@ -173,7 +173,7 @@ PHASE 2: FRONTEND (Mobile Client)
 ├── Step 2.5: Evidence Capture & Local Media Management
 ├── Step 2.6: Settings Tab — Report Synchronization Centre
 ├── Step 2.7: Assam Analytics Dashboard & Interactive Cluster Map
-├── Step 2.8: Mock Voice Input & Model Download UI Placeholders
+├── Step 2.8: Native Offline AI Integration (separate Android client)
 └── Step 2.9: End-to-End Acceptance Testing (All 16 Criteria)
 
 PHASE 3: DOCKERISATION & DEPLOYMENT
@@ -189,7 +189,7 @@ PHASE 3: DOCKERISATION & DEPLOYMENT
 When generating code or proposing implementations for CrashScribe:
 1. **Always check existing architecture:** Cross-reference [architecture.md](file:///Users/knibirdgautam/Documents/CS_Coding_Projects/crashScribe/readContext/architecture.md), [backend.md](file:///Users/knibirdgautam/Documents/CS_Coding_Projects/crashScribe/readContext/backend.md), and [workflow.md](file:///Users/knibirdgautam/Documents/CS_Coding_Projects/crashScribe/readContext/workflow.md).
 2. **Preserve offline-first guarantees:** Never write mobile code that assumes an active network connection for draft creation, review, or local persistence.
-3. **Respect AI boundaries:** Never import real ONNX/Whisper/TFLite dependencies or audio recording packages for the prototype; always use mock implementations.
+3. **Respect AI boundaries:** Never fake transcription, translation, model downloads, or model readiness. Keep native ONNX/Whisper/TFLite dependencies out of the browser client; implement them only in the native Android client after artifact and device validation.
 4. **Enforce idempotency:** Ensure all ingestion endpoints and client sync requests use `X-Idempotency-Key` or `client_report_id` checks.
 5. **Database isolation:** Do not introduce cross-database foreign key joins between the microservices.
 

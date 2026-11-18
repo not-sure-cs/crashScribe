@@ -1125,11 +1125,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                         : text,
                     }))
                   }
+                  onAIResult={(draft) => setFormData((prev) => ({ ...prev, ai_narrative_draft: draft }))}
                 />
               </div>
             </div>
             <p className="text-[10px] text-slate-400 flex items-center gap-1">
-              <span>🎤 Tap the mic icon on the bottom-right to test the voice-to-text transcription placeholder.</span>
+              <span>Tap the mic icon to record, call the configured AI endpoint, review the original transcript and translation, then approve it.</span>
             </p>
           </div>
         )}

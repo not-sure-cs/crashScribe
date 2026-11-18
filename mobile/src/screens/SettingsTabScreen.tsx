@@ -23,7 +23,8 @@ import { Officer, AuthSession } from '../types/auth.types';
 import { LocalReport } from '../types/edar.types';
 import { StorageService } from '../services/storage.service';
 import { ApiService } from '../services/api.service';
-import { MockModelService, AIModelInfo } from '../services/mockModel.service';
+import { BrowserAIConfig, OfflineAIService } from '../services/offlineAI.service';
+import { AIModelInfo } from '../types/ai.types';
 
 interface SettingsTabScreenProps {
   officer: Officer;
@@ -48,8 +49,18 @@ export const SettingsTabScreen: React.FC<SettingsTabScreenProps> = ({
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState('');
 
-  // 9.2 Local Model Downloads State
-  const [models, setModels] = useState<AIModelInfo[]>(MockModelService.getModels());
+  const handleSaveAIConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    OfflineAIService.saveConfig(aiConfig);
+    setModels(OfflineAIService.getModels());
+    setAIConfigSaved(true);
+    setTimeout(() => setAIConfigSaved(false), 3000);
+  };
+
+  // 9.2 Local Model State. The browser demo never simulates an artifact download.
+  const [models, setModels] = useState<AIModelInfo[]>(OfflineAIService.getModels());
+  const [aiConfig, setAIConfig] = useState<BrowserAIConfig>(OfflineAIService.getConfig());
+  const [aiConfigSaved, setAIConfigSaved] = useState(false);
 
   // 9.3 Synchronization Centre State
   const [pendingReports, setPendingReports] = useState<LocalReport[]>([]);
@@ -106,44 +117,6 @@ export const SettingsTabScreen: React.FC<SettingsTabScreenProps> = ({
     } finally {
       setProfileSaving(false);
     }
-  };
-
-  // 9.2 Mock AI Model Download Simulator (0% -> 100% over 2.5s)
-  const handleDownloadModel = (modelId: string) => {
-    const updated = models.map((m) => {
-      if (m.id === modelId) {
-        return { ...m, isDownloading: true, downloadProgress: 10 };
-      }
-      return m;
-    });
-    setModels(updated);
-
-    // Step 1: 35%
-    setTimeout(() => {
-      setModels((prev) =>
-        prev.map((m) => (m.id === modelId ? { ...m, downloadProgress: 45 } : m))
-      );
-    }, 700);
-
-    // Step 2: 80%
-    setTimeout(() => {
-      setModels((prev) =>
-        prev.map((m) => (m.id === modelId ? { ...m, downloadProgress: 85 } : m))
-      );
-    }, 1500);
-
-    // Step 3: 100% (Complete)
-    setTimeout(() => {
-      setModels((prev) => {
-        const final = prev.map((m) =>
-          m.id === modelId
-            ? { ...m, isDownloading: false, downloadProgress: 100, isDownloaded: true }
-            : m
-        );
-        MockModelService.saveModels(final);
-        return final;
-      });
-    }, 2400);
   };
 
   // 9.3 Manual Sync: Single Report
@@ -525,20 +498,37 @@ export const SettingsTabScreen: React.FC<SettingsTabScreenProps> = ({
         </div>
       </section>
 
-      {/* SECTION 9.2: Local AI Model Downloads (Hardcoded Prototype Cards) */}
+      {/* SECTION 9.2: Local AI Model Status */}
       <section className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
         <div className="flex items-center space-x-2.5 border-b border-slate-800 pb-3">
           <div className="p-2 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-xl">
             <Cpu className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-white">9.2 Local AI Model Downloads (UI Placeholders)</h2>
-            <p className="text-[11px] text-slate-400">Offline speech-to-text models for field transcription</p>
+            <h2 className="text-sm font-bold text-white">9.2 Local AI Model Status</h2>
+            <p className="text-[11px] text-slate-400">Verified native Android artifacts only</p>
           </div>
         </div>
 
+        <form onSubmit={handleSaveAIConfig} className="space-y-2.5 bg-slate-950 border border-slate-800 rounded-xl p-3">
+          <div className="text-[10px] text-slate-400">Browser inference provider</div>
+          <select value={aiConfig.provider} onChange={(e) => setAIConfig({ ...aiConfig, provider: e.target.value as BrowserAIConfig['provider'] })} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white">
+            <option value="local">Local model server (recommended for privacy)</option>
+            <option value="huggingface">Hugging Face hosted inference</option>
+          </select>
+          <input value={aiConfig.baseUrl} onChange={(e) => setAIConfig({ ...aiConfig, baseUrl: e.target.value })} placeholder={aiConfig.provider === 'local' ? 'http://127.0.0.1:8000' : 'https://router.huggingface.co/hf-inference/models'} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white" />
+          <input value={aiConfig.token || ''} onChange={(e) => setAIConfig({ ...aiConfig, token: e.target.value })} type="password" placeholder="API token (never commit this)" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white" />
+          <input value={aiConfig.asrModel} onChange={(e) => setAIConfig({ ...aiConfig, asrModel: e.target.value })} placeholder="ASR model ID" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white" />
+          <input value={aiConfig.translationUrl || ''} onChange={(e) => setAIConfig({ ...aiConfig, translationUrl: e.target.value })} placeholder="Translation URL (optional for English)" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white" />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-slate-500">Local API expects POST /transcribe and /translate.</span>
+            <button type="submit" className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold">Save provider</button>
+          </div>
+          {aiConfigSaved && <div className="text-[10px] text-emerald-400">Provider settings saved. The next recording will use them.</div>}
+        </form>
+
         <p className="text-xs text-slate-400">
-          Quantized edge weights are loaded to local device storage for offline speech recognition without cellular dependency.
+          Configure a real local or hosted endpoint. The browser does not download or pretend to load model artifacts.
         </p>
 
         <div className="space-y-3">
@@ -547,51 +537,26 @@ export const SettingsTabScreen: React.FC<SettingsTabScreenProps> = ({
               <div className="flex justify-between items-start">
                 <div>
                   <div className="text-xs font-bold text-white">{model.name}</div>
-                  <div className="text-amber-400 text-xs font-semibold">{model.code}</div>
-                  <div className="text-[10px] text-slate-400">{model.category} • {model.sizeMB} MB</div>
+                  <div className="text-amber-400 text-xs font-semibold">{model.purpose}</div>
+                  <div className="text-[10px] text-slate-400">Languages: {model.languages.join(', ')}</div>
                 </div>
 
-                {model.isDownloaded ? (
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Downloaded (Ready)
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => handleDownloadModel(model.id)}
-                    disabled={model.isDownloading}
-                    className="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1 disabled:opacity-50"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>{model.isDownloading ? 'Downloading...' : 'Download'}</span>
-                  </button>
-                )}
+                <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">
+                  {model.status}
+                </span>
               </div>
 
               <p className="text-[11px] text-slate-400 leading-normal">
-                {model.description}
+                {model.purpose}
               </p>
 
-              {/* Mock Download Progress Bar */}
-              {model.isDownloading && (
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] text-purple-300">
-                    <span>Downloading quantized INT8 weights...</span>
-                    <span>{model.downloadProgress}%</span>
-                  </div>
-                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div
-                      className="bg-purple-500 h-full transition-all duration-300 rounded-full"
-                      style={{ width: `${model.downloadProgress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
+              {model.sha256 && <div className="text-[10px] text-slate-500 font-mono">SHA-256: {model.sha256}</div>}
             </div>
           ))}
         </div>
 
         <div className="text-[10px] text-slate-500 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
-          💡 <span className="font-semibold text-slate-400">Prototype Note:</span> This interface tests state transitions and progress animations. Real ONNX/TFLite model downloading will be linked in the Phase 2 roadmap.
+          <span className="font-semibold text-slate-400">Native client required:</span> a model is not READY until its real artifact is downloaded, SHA-256 verified, atomically installed, and successfully loaded. Manual text entry remains available.
         </div>
       </section>
 
